@@ -53,6 +53,7 @@ public class fieldOriented extends LinearOpMode {
 
         Servo clawLeft = hardwareMap.servo.get("leftclaw");
         Servo clawRight = hardwareMap.servo.get("rightclaw");
+        Servo Drone = hardwareMap.servo.get("Drone");
 
 
 
