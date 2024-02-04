@@ -149,6 +149,12 @@ public class fieldOriented extends LinearOpMode {
                 clawLeft.setPosition(0.035);
             }
 
+            if(gamepad2.b) {
+                //plane launcher
+                Drone.setPosition(0);
+                Drone.setPosition(0.5);
+            }
+
             // uncomment me to change direction
             // rotator.setPower(gamepad2.right_stick_y * 0.5);
             rotator.setPower(-gamepad2.right_stick_y * 0.5);
