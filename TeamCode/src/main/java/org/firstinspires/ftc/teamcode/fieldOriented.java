@@ -1,9 +1,15 @@
 package org.firstinspires.ftc.teamcode;
 
+import com.ThermalEquilibrium.homeostasis.Controllers.Feedback.BasicPID;
+import com.ThermalEquilibrium.homeostasis.Parameters.PIDCoefficients;
+import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.dashboard.config.Config;
+import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
@@ -13,12 +19,18 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
-
+@Config
 @TeleOp(name = "fieldOriented", group = "Competition")
 public class fieldOriented extends LinearOpMode {
 
     public static Orientation angles;
     public static Acceleration gravity;
+
+    public static double KP = 0.05;
+    public static double KI = 0;
+    public static double KD = 0;
+
+
 
     BNO055IMU imu;
 
@@ -53,7 +65,7 @@ public class fieldOriented extends LinearOpMode {
 
         Servo clawLeft = hardwareMap.servo.get("leftclaw");
         Servo clawRight = hardwareMap.servo.get("rightclaw");
-        Servo Drone = hardwareMap.servo.get("Drone");
+        CRServo Drone = hardwareMap.crservo.get("Drone");
 
 
 
@@ -71,7 +83,11 @@ public class fieldOriented extends LinearOpMode {
         extender.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rotator.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
+        Drone.setPower(0);
 
+        BasicPID arm_controller = new BasicPID(new PIDCoefficients(KP, KI, KD));
+
+        double arm_target = 1;
 
         waitForStart();
 
@@ -150,19 +166,34 @@ public class fieldOriented extends LinearOpMode {
                 clawLeft.setPosition(0.035);
             }
 
-            if(gamepad2.b) {
-                //plane launcher
-                Drone.setPosition(0);
-                Drone.setPosition(0.5);
+            if(gamepad2.x) {
+                //paper plane launcher
+                Drone.setPower(1);
+            }
+            else {
+                Drone.setPower(0);
             }
 
-            // uncomment me to change direction
-            // rotator.setPower(gamepad2.right_stick_y * 0.5);
-            rotator.setPower(-gamepad2.right_stick_y * 0.5);
+            // slightly above ground: 18
+            // lifted to board: 120
+            // set on ground: 1-5
+            if (gamepad2.right_bumper) {
+                arm_target += -gamepad2.right_stick_y;
+            } else {
+                arm_target += -gamepad2.right_stick_y * 1.45;
+            }
 
+            if (arm_target > 228) {
+                arm_target = 228;
+            } else if (arm_target < 2) {
+                arm_target = 2;
+            }
 
-
-
+            rotator.setPower(arm_controller.calculate(arm_target + 6, rotator.getCurrentPosition()));
+            //TelemetryPacket packet = new TelemetryPacket();
+            //packet.put("Arm Position", rotator.getCurrentPosition());
+            //packet.put("Arm Target", arm_target);
+            //FtcDashboard.getInstance().sendTelemetryPacket(packet);
         }
     }
 }
