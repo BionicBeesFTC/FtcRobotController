@@ -48,8 +48,8 @@ public class fieldOriented extends LinearOpMode {
         DcMotor lB = hardwareMap.dcMotor.get("back_left");
         DcMotor rF = hardwareMap.dcMotor.get("front_right");
         DcMotor rB = hardwareMap.dcMotor.get("back_right");
-        DcMotor extender = hardwareMap.dcMotor.get("steve");
-        DcMotor rotator = hardwareMap.dcMotor.get("bob");
+        DcMotor extender = hardwareMap.dcMotor.get("extender");
+        DcMotor rotator = hardwareMap.dcMotor.get("rotator");
 
         Servo clawLeft = hardwareMap.servo.get("leftclaw");
         Servo clawRight = hardwareMap.servo.get("rightclaw");
