@@ -35,7 +35,7 @@ public class red1ParkOut extends LinearOpMode {
 
         TrajectorySequence untitled0 = drive.trajectorySequenceBuilder(new Pose2d(11.02, -61.25, Math.toRadians(447.71)))
                 .waitSeconds(0)
-                .splineTo(new Vector2d(61.25, 5.73), Math.toRadians(360.00))
+                .splineTo(new Vector2d(61.25, -3.73), Math.toRadians(360.00))
                 .build();
         drive.setPoseEstimate(untitled0.start());
         drive.followTrajectorySequence(untitled0);
