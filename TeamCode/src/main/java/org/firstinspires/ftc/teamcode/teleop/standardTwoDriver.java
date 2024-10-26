@@ -62,8 +62,8 @@ public class standardTwoDriver extends LinearOpMode {
         DcMotor rotator = hardwareMap.dcMotor.get("rotator");
 
         Servo clawLeft = hardwareMap.servo.get("leftclaw");
-        Servo clawRight = hardwareMap.servo.get("rightclaw");
-        CRServo Drone = hardwareMap.crservo.get("Drone");
+        // Servo clawRight = hardwareMap.servo.get("rightclaw");
+        // CRServo Drone = hardwareMap.crservo.get("Drone");
 
 
 
@@ -81,7 +81,7 @@ public class standardTwoDriver extends LinearOpMode {
         extender.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rotator.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        Drone.setPower(0);
+        // Drone.setPower(0);
 
         BasicPID arm_controller = new BasicPID(new PIDCoefficients(KP, KI, KD));
 
@@ -154,23 +154,23 @@ public class standardTwoDriver extends LinearOpMode {
 
             if(gamepad2.right_trigger > 0.5) {
                 // close
-                clawRight.setPosition(0.035);
+                // clawRight.setPosition(0.035);
                 clawLeft.setPosition(0);
             }
 
             if(gamepad2.left_trigger > 0.5) {
                 // open
-                clawRight.setPosition(0);
+                // clawRight.setPosition(0);
                 clawLeft.setPosition(0.035);
             }
 
-            if(gamepad2.x) {
+            // if(gamepad2.x) {
                 //paper plane launcher
-                Drone.setPower(1);
-            }
-            else {
-                Drone.setPower(0);
-            }
+                // Drone.setPower(1);
+            // }
+            // else {
+                // Drone.setPower(0);
+            // }
 
             // slightly above ground: 18
             // lifted to board: 120
