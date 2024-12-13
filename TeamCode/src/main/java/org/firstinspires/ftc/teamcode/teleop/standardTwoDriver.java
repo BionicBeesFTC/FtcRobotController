@@ -2,7 +2,9 @@ package org.firstinspires.ftc.teamcode.teleop;
 
 import com.ThermalEquilibrium.homeostasis.Controllers.Feedback.BasicPID;
 import com.ThermalEquilibrium.homeostasis.Parameters.PIDCoefficients;
+import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.Config;
+import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -58,7 +60,8 @@ public class standardTwoDriver extends LinearOpMode {
         DcMotor lB = hardwareMap.dcMotor.get("back_left");
         DcMotor rF = hardwareMap.dcMotor.get("front_right");
         DcMotor rB = hardwareMap.dcMotor.get("back_right");
-        DcMotor extender = hardwareMap.dcMotor.get("extender");
+        DcMotor extender1 = hardwareMap.dcMotor.get("extender1");
+        DcMotor extender2 = hardwareMap.dcMotor.get("extender2");
         DcMotor rotator = hardwareMap.dcMotor.get("rotator");
 
         Servo clawLeft = hardwareMap.servo.get("leftclaw");
@@ -72,28 +75,33 @@ public class standardTwoDriver extends LinearOpMode {
 
         rF.setDirection(DcMotor.Direction.REVERSE);
         rB.setDirection(DcMotor.Direction.REVERSE);
+        extender1.setDirection(DcMotor.Direction.REVERSE);
 
         // Set motors to brake when not in use
         lF.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rF.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         lB.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rB.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        extender.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        extender1.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        extender2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rotator.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         // Drone.setPower(0);
+        //rotator.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rotator.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rotator.setTargetPosition(0);
+        rotator.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+//        extender1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+//        extender2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
         BasicPID arm_controller = new BasicPID(new PIDCoefficients(KP, KI, KD));
-
-        double arm_target = 1;
+        int arm_target = 1;
 
         waitForStart();
 
         if (isStopRequested()) return;
 
         while (opModeIsActive()) {
-
-
             double rx = -gamepad1.right_stick_x; // Remember, this is reversed!
             double x = -gamepad1.left_stick_x * 1.1; // Counteract imperfect strafing
             double y = gamepad1.left_stick_y;
@@ -104,6 +112,8 @@ public class standardTwoDriver extends LinearOpMode {
             double frontRightPower = y - x - rx;
             double backRightPower = y + x - rx;
 
+            int MAX_ARM_HEIGHT = 4300;
+            //used to set the height of the extendor
             // Put powers in the range of -1 to 1 only if they aren't already
             // Not checking would cause us to always drive at full speed
             if (Math.abs(frontLeftPower) > 1 || Math.abs(backLeftPower) > 1 ||
@@ -127,35 +137,45 @@ public class standardTwoDriver extends LinearOpMode {
                 rF.setPower(frontRightPower * 0.25);
                 rB.setPower(backRightPower * 0.25);
                 telemetry.addLine("Speed one quarter");
-                telemetry.update();
+//                telemetry.update();
             } else if (gamepad1.left_bumper) {
                 lF.setPower(frontLeftPower * 0.75);
                 lB.setPower(backLeftPower * 0.75);
                 rF.setPower(frontRightPower * 0.75);
                 rB.setPower(backRightPower * 0.75);
                 telemetry.addLine("Speed 3/4");
-                telemetry.update();
+//                telemetry.update();
             } else {
                 lF.setPower(frontLeftPower);
                 lB.setPower(backLeftPower);
                 rF.setPower(frontRightPower);
                 rB.setPower(backRightPower);
                 telemetry.addLine("Speed full");
-                telemetry.update();
+//                telemetry.update();
             }
-
+            if (extender1.getCurrentPosition() < MAX_ARM_HEIGHT){
             if(gamepad2.dpad_up){
-                extender.setPower(1);
+                extender1.setPower(1.00);
+                extender2.setPower(1.00);
             } else if(gamepad2.dpad_down){
-                extender.setPower(-1);
+                extender1.setPower(-0.8);
+                extender2.setPower(-0.8);
             } else {
-                extender.setPower(0);
+                extender1.setPower(0.08);
+                extender2.setPower(0.08);
             }
+            } else {
+                extender1.setPower(0.0);
+                extender2.setPower(0.0);
+            }
+            //TODO:Delete this code after fixing arm extention limit.
 
+            telemetry.addLine("extender 1: :) " + extender1.getCurrentPosition());
+//            telemetry.update();
             if(gamepad2.left_bumper) {
                 // close
                 // clawRight.setPosition(0.035);
-                clawLeft.setPosition(0);
+                clawLeft.setPosition(0.);
 
             }
 
@@ -165,34 +185,37 @@ public class standardTwoDriver extends LinearOpMode {
                 clawLeft.setPosition(0.040);
             }
 
-            // if(gamepad2.x) {
-                //paper plane launcher
-                // Drone.setPower(1);
-            // }
-            // else {
-                // Drone.setPower(0);
-            // }
-
-            // slightly above ground: 18
-            // lifted to board: 120
-            // set on ground: 1-5
-            if (gamepad2.right_bumper) {
-                arm_target += -gamepad2.right_stick_y;
-            } else {
-                arm_target += -gamepad2.right_stick_y * 1.45;
+            int currentPos = rotator.getCurrentPosition();
+            arm_target += gamepad2.right_stick_y * 10.0;
+            if (arm_target > 1380) {
+                arm_target = 1380;
+            } else if (arm_target < 0) {
+                arm_target = 0;
             }
+            double pidPower = arm_controller.calculate(arm_target, currentPos);
+            rotator.setTargetPosition(arm_target);
+            rotator.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            rotator.setPower(-pidPower);//having it negative should make the +y JS go up and -y JS go down
 
-            if (arm_target > 228) {
-                arm_target = 228;
-            } else if (arm_target < 2) {
-                arm_target = 2;
-            }
-
-            rotator.setPower(arm_controller.calculate(arm_target + 6, rotator.getCurrentPosition()));
-            //TelemetryPacket packet = new TelemetryPacket();
-            //packet.put("Arm Position", rotator.getCurrentPosition());
-            //packet.put("Arm Target", arm_target);
-            //FtcDashboard.getInstance().sendTelemetryPacket(packet);
+            telemetry.addLine("Right Stick Y Value: " + gamepad2.right_stick_y);
+            telemetry.addLine("Current Position: " + currentPos);
+            telemetry.addLine("TEST: " + rotator.getCurrentPosition());
+            telemetry.addLine("Target Position: " + arm_target);
+            telemetry.addLine("PID Power: " + pidPower);
+            telemetry.update();
+            //TODO: might need to readd the creation of packet;
+//            TelemetryPacket packet = new TelemetryPacket();
+//            packet.put("extender1: ", extender1.getCurrentPosition());
+//            packet.put("extender2: ", extender2.getCurrentPosition());
+//            FtcDashboard.getInstance().sendTelemetryPacket(packet);
         }
     }
-}
+    //private void initialize_extendor_1 (DcMotor extendor1 ,DcMotor extendor2){
+       // int extendor1_position = extendor1.getCurrentPosition();
+       // int extendor2_position = extendor2.getCurrentPosition();
+//        while (extendor1_position < -1000 && extendor2_position <-1000){
+//            extendor1.setPower(-0.6);
+//            extendor2.setPower(-0.6);
+//            extendor1_position = extendor1.getCurrentPosition();
+//            extendor2_position = extendor2.getCurrentPosition();
+        }
