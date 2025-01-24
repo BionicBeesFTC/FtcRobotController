@@ -31,9 +31,7 @@ public class standardTwoDriver extends LinearOpMode {
     public static double KD = 0;
 
 
-
     BNO055IMU imu;
-
 
 
     public void initIMU(HardwareMap hwm) {
@@ -51,7 +49,6 @@ public class standardTwoDriver extends LinearOpMode {
     }
 
 
-
     @Override
     public void runOpMode() {
         // Declare our motors
@@ -67,7 +64,6 @@ public class standardTwoDriver extends LinearOpMode {
         Servo clawLeft = hardwareMap.servo.get("leftclaw");
         // Servo clawRight = hardwareMap.servo.get("rightclaw");
         // CRServo Drone = hardwareMap.crservo.get("Drone");
-
 
 
         // Reverse the right side motors
@@ -96,6 +92,9 @@ public class standardTwoDriver extends LinearOpMode {
 
         BasicPID arm_controller = new BasicPID(new PIDCoefficients(KP, KI, KD));
         int arm_target = 1;
+
+        int extender1Holdtarget = 0;
+        int extender2Holdtarget = 0;
 
         waitForStart();
 
@@ -153,63 +152,102 @@ public class standardTwoDriver extends LinearOpMode {
                 telemetry.addLine("Speed full");
 //                telemetry.update();
             }
-            if (extender1.getCurrentPosition() < MAX_ARM_HEIGHT){
-            if(gamepad2.dpad_up){
-                extender1.setPower(1.00);
-                extender2.setPower(1.00);
-            } else if(gamepad2.dpad_down){
-                extender1.setPower(-0.8);
-                extender2.setPower(-0.8);
+            if (extender1.getCurrentPosition() < MAX_ARM_HEIGHT) {
+                if (gamepad2.dpad_up) {
+                    extender1Holdtarget=0;
+                    extender2Holdtarget=0;
+                    extender1.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                    extender2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                    extender1.setPower(1.00);
+                    extender2.setPower(1.00);
+                } else if (gamepad2.dpad_down) {
+                    extender1Holdtarget=0;
+                    extender2Holdtarget=0;
+                    extender1.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                    extender2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                    extender1.setPower(-0.8);
+                    extender2.setPower(-0.8);
+                } else {
+                    extender1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                    extender2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                    if(extender1Holdtarget == 0){
+                        extender1Holdtarget = extender1.getCurrentPosition();
+                    }
+                    if(extender2Holdtarget == 0){
+                        extender2Holdtarget = extender2.getCurrentPosition();
+                    }
+                    if(Math.abs(extender1Holdtarget-extender1.getCurrentPosition()) > 10){
+                        extender1.setTargetPosition(extender1Holdtarget);
+                    }
+                    if(Math.abs(extender2Holdtarget-extender2.getCurrentPosition()) > 10){
+                        extender2.setTargetPosition(extender2Holdtarget);
+                    }
+                    extender1.setPower(1.00);
+                    extender2.setPower(1.00);
+                }
             } else {
-                extender1.setPower(0.08);
-                extender2.setPower(0.08);
+                extender1.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                extender2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                extender1.setPower(0);
+                extender2.setPower(0);
             }
-            } else {
-                extender1.setPower(0.0);
-                extender2.setPower(0.0);
-            }
-            //TODO:Delete this code after fixing arm extention limit.
 
-            telemetry.addLine("extender 1: :) " + extender1.getCurrentPosition());
+                //TODO:Delete this code after fixing arm extention limit.
+
+                telemetry.addLine("extender 1: :) " + extender1.getCurrentPosition());
 //            telemetry.update();
-            if(gamepad2.left_bumper) {
-                // close
-                // clawRight.setPosition(0.035);
-                clawLeft.setPosition(0.);
+                if (gamepad2.left_bumper) {
+                    // close
+                    // clawRight.setPosition(0.035);
+                    clawLeft.setPosition(0.);
 
+                }
+
+                if (gamepad2.right_bumper) {
+                    // open
+                    // clawRight.setPosition(0);
+                    clawLeft.setPosition(0.040);
+                }
+
+                if (gamepad1.a) {
+                    rotator.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    rotator.setTargetPosition(0);
+                    rotator.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                }
+
+                int currentPos = rotator.getCurrentPosition();
+                arm_target += gamepad2.right_stick_y * 10.0;
+                if (!gamepad1.x) {
+                    if (arm_target > 1380) {
+                        arm_target = 1380;
+                    } else if (arm_target < 0) {
+                        arm_target = 0;
+                    }
+                }
+                double pidPower = arm_controller.calculate(arm_target, currentPos);
+                rotator.setTargetPosition(arm_target);
+                rotator.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                rotator.setPower(-pidPower);//having it negative should make the +y JS go up and -y JS go down
+
+                telemetry.addLine("Right Stick Y Value: " + gamepad2.right_stick_y);
+                telemetry.addLine("Current Position: " + currentPos);
+                telemetry.addLine("TEST: " + rotator.getCurrentPosition());
+                telemetry.addLine("Target Position: " + arm_target);
+                telemetry.addLine("PID Power: " + pidPower);
+                telemetry.update();
             }
+        }
+    }
 
-            if(gamepad2.right_bumper) {
-                // open
-                // clawRight.setPosition(0);
-                clawLeft.setPosition(0.040);
-            }
 
-            int currentPos = rotator.getCurrentPosition();
-            arm_target += gamepad2.right_stick_y * 10.0;
-            if (arm_target > 1380) {
-                arm_target = 1380;
-            } else if (arm_target < 0) {
-                arm_target = 0;
-            }
-            double pidPower = arm_controller.calculate(arm_target, currentPos);
-            rotator.setTargetPosition(arm_target);
-            rotator.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-            rotator.setPower(-pidPower);//having it negative should make the +y JS go up and -y JS go down
 
-            telemetry.addLine("Right Stick Y Value: " + gamepad2.right_stick_y);
-            telemetry.addLine("Current Position: " + currentPos);
-            telemetry.addLine("TEST: " + rotator.getCurrentPosition());
-            telemetry.addLine("Target Position: " + arm_target);
-            telemetry.addLine("PID Power: " + pidPower);
-            telemetry.update();
             //TODO: might need to readd the creation of packet;
 //            TelemetryPacket packet = new TelemetryPacket();
 //            packet.put("extender1: ", extender1.getCurrentPosition());
 //            packet.put("extender2: ", extender2.getCurrentPosition());
 //            FtcDashboard.getInstance().sendTelemetryPacket(packet);
-        }
-    }
+      //  }
+   // }
     //private void initialize_extendor_1 (DcMotor extendor1 ,DcMotor extendor2){
        // int extendor1_position = extendor1.getCurrentPosition();
        // int extendor2_position = extendor2.getCurrentPosition();
@@ -218,4 +256,4 @@ public class standardTwoDriver extends LinearOpMode {
 //            extendor2.setPower(-0.6);
 //            extendor1_position = extendor1.getCurrentPosition();
 //            extendor2_position = extendor2.getCurrentPosition();
-        }
+   //     }
