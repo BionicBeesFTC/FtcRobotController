@@ -20,6 +20,7 @@ public class generic2Place extends LinearOpMode {
         ROTATING_WRIST,
         RELEASING,
         RETRACTING,
+        LOWERING,
         PARKING,
         COMPLETED
     }
@@ -51,13 +52,13 @@ public class generic2Place extends LinearOpMode {
                     break;
 
                 case EXTENDING:
-                    if (moveExtenderToPosition(EXTENDER_TARGET)) {
+                    if (moveExtenderToPosition(EXTENDER_TARGET) && moveWristToPosition(WRIST_RETRACTED)) {
                         currentState = RobotState.ROTATING_WRIST;
                     }
                     break;
 
                 case ROTATING_WRIST:
-                    if (moveWristToPosition(WRIST_EXTENDED)) {
+                    if (moveWristToPosition(WRIST_EXTENDED) && moveExtenderToPosition(EXTENDER_TARGET)) {
                         currentState = RobotState.RELEASING;
                     }
                     break;
@@ -69,11 +70,17 @@ public class generic2Place extends LinearOpMode {
                     break;
 
                 case RETRACTING:
-                    if (moveWristToPosition(WRIST_RETRACTED) && moveExtenderToPosition(0)) {
-                        currentState = RobotState.PARKING;
+                    if (moveExtenderToPosition(EXTENDER_TARGET) && moveWristToPosition(WRIST_RETRACTED)) {
+                        currentState = RobotState.LOWERING;
                     }
                     break;
 
+                case LOWERING:
+                    if (moveExtenderToPosition(20) && moveWristToPosition(WRIST_RETRACTED)) {
+                        currentState = RobotState.PARKING;
+                    }
+                    break;
+            
                 case PARKING:
                     executeTrajectory1();
                     currentState = RobotState.COMPLETED;
