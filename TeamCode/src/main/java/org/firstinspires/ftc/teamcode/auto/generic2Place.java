@@ -118,9 +118,9 @@ public class generic2Place extends LinearOpMode {
                 }
                 if (iter2 > 30) {
                     targetPosition = 0;
-                    if (Math.abs(averagePosition - targetPosition) < 50) {
-                        break;
-                    }
+                }
+                if (iter2 > 60) {
+                    break;
                 }
             }
 
