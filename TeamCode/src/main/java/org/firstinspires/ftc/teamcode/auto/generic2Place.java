@@ -9,153 +9,140 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
 
+import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.teamcode.drive.SampleMecanumDrive;
+import org.firstinspires.ftc.teamcode.trajectorysequence.TrajectorySequence;
+
 @Autonomous(name = "Generic 2 Place & Park", group = "Competition")
 public class generic2Place extends LinearOpMode {
-    private enum RobotState {
-        INITIALIZING,
-        DRIVING_TO_POSITION,
-        EXTENDING,
-        ROTATING_WRIST,
-        RELEASING,
-        RETRACTING,
-        LOWERING,
-        PARKING,
-        COMPLETED
-    }
-
-    private static final int EXTENDER_TARGET = 3750;
-    private static final int WRIST_EXTENDED = 600;
-    private static final int WRIST_RETRACTED = 5;
-    private static final double CLAW_OPEN = 0.040;
-    private static final double CLAW_CLOSED = 0.0;
-    
-    private RobotState currentState = RobotState.INITIALIZING;
-    private SampleMecanumDrive drive;
-    private DcMotor extender1, extender2, wrist;
-    private Servo clawLeft;
-    private BasicPID extController, wristController;
 
     @Override
     public void runOpMode() {
-        initializeHardware();
-        
+        SampleMecanumDrive drive = new SampleMecanumDrive(hardwareMap);
+
+        DcMotor extender1 = hardwareMap.dcMotor.get("extender1");
+        DcMotor extender2 = hardwareMap.dcMotor.get("extender2");
+        DcMotor wrist = hardwareMap.dcMotor.get("rotator");
+        Servo clawLeft = hardwareMap.servo.get("leftclaw");
+
+
+
+        // Set the motors to use encoders
+        extender1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        extender2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        wrist.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        extender1.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        extender2.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        wrist.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        // Set up the PID controller
+        PIDCoefficients coeffs = new PIDCoefficients(0.005, 0.0, 0.0);
+        BasicPID extController = new BasicPID(coeffs);
+        PIDCoefficients wristCoeffs = new PIDCoefficients(0.01, 0.00, 0.00);
+        BasicPID wristController = new BasicPID(wristCoeffs);
+
+        // Target position for the extender motors (modify as needed)
+        int targetPosition = 3750;
+
+        double pidOutput = 0.0;
+        int position1 = 0;
+        int position2 = 0;
+        int averagePosition = 0;
+        telemetry.addData("pos1", position1);
+
+        clawLeft.setPosition(0.);
+
+
         waitForStart();
         if (isStopRequested()) return;
 
-        while (opModeIsActive() && currentState != RobotState.COMPLETED) {
-            switch (currentState) {
-                case INITIALIZING:
-                    executeTrajectory0();
-                    currentState = RobotState.EXTENDING;
-                    break;
-
-                case EXTENDING:
-                    if (moveExtenderToPosition(EXTENDER_TARGET) && moveWristToPosition(WRIST_RETRACTED)) {
-                        currentState = RobotState.ROTATING_WRIST;
-                    }
-                    break;
-
-                case ROTATING_WRIST:
-                    if (moveWristToPosition(WRIST_EXTENDED) && moveExtenderToPosition(EXTENDER_TARGET)) {
-                        currentState = RobotState.RELEASING;
-                    }
-                    break;
-
-                case RELEASING:
-                    clawLeft.setPosition(CLAW_OPEN);
-                    sleep(100);
-                    currentState = RobotState.RETRACTING;
-                    break;
-
-                case RETRACTING:
-                    if (moveExtenderToPosition(EXTENDER_TARGET) && moveWristToPosition(WRIST_RETRACTED)) {
-                        currentState = RobotState.LOWERING;
-                    }
-                    break;
-
-                case LOWERING:
-                    if (moveExtenderToPosition(20) && moveWristToPosition(WRIST_RETRACTED)) {
-                        currentState = RobotState.PARKING;
-                    }
-                    break;
-            
-                case PARKING:
-                    executeTrajectory1();
-                    currentState = RobotState.COMPLETED;
-                    break;
-            }
-            
-            updateTelemetry();
-            sleep(10);
-        }
-    }
-
-    private void initializeHardware() {
-        drive = new SampleMecanumDrive(hardwareMap);
-        extender1 = hardwareMap.dcMotor.get("extender1");
-        extender2 = hardwareMap.dcMotor.get("extender2");
-        wrist = hardwareMap.dcMotor.get("rotator");
-        clawLeft = hardwareMap.servo.get("leftclaw");
-
-        initializeMotors();
-        initializePIDControllers();
-        clawLeft.setPosition(CLAW_CLOSED);
-    }
-
-    private void initializeMotors() {
-        DcMotor[] motors = {extender1, extender2, wrist};
-        for (DcMotor motor : motors) {
-            motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-            motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        }
-    }
-
-    private void initializePIDControllers() {
-        extController = new BasicPID(new PIDCoefficients(0.005, 0.0, 0.0));
-        wristController = new BasicPID(new PIDCoefficients(0.01, 0.00, 0.00));
-    }
-
-    private boolean moveExtenderToPosition(int target) {
-        int position1 = -extender1.getCurrentPosition();
-        int position2 = extender2.getCurrentPosition();
-        int averagePosition = (position1 + position2) / 2;
-        
-        double pidOutput = extController.calculate(averagePosition, target);
-        extender1.setPower(pidOutput);
-        extender2.setPower(-pidOutput);
-        
-        return Math.abs(averagePosition - target) < 100;
-    }
-
-    private boolean moveWristToPosition(int target) {
-        double wristOutput = wristController.calculate(wrist.getCurrentPosition(), target);
-        wrist.setPower(-wristOutput);
-        return Math.abs(wrist.getCurrentPosition() - target) < 50;
-    }
-
-    private void executeTrajectory0() {
-        TrajectorySequence trajectory = drive.trajectorySequenceBuilder(new Pose2d(-11.99, -60.10, Math.toRadians(90.81)))
+        TrajectorySequence trajectory0 = drive.trajectorySequenceBuilder(new Pose2d(-11.99, -60.10, Math.toRadians(90.81)))
                 .splineTo(new Vector2d(-35.96, -48.38), Math.toRadians(194.59))
                 .splineTo(new Vector2d(-57.20, -48.56), Math.toRadians(222.27))
                 .build();
-        drive.setPoseEstimate(trajectory.start());
-        drive.followTrajectorySequence(trajectory);
-    }
+        drive.setPoseEstimate(trajectory0.start());
+        drive.followTrajectorySequence(trajectory0);
 
-    private void executeTrajectory1() {
-        TrajectorySequence trajectory = drive.trajectorySequenceBuilder(new Pose2d(-58.60, -57.19, Math.toRadians(228.30)))
+        boolean reachedFirst = false;
+        boolean reachedSecond = false;
+        boolean placed = false;
+
+        int iter_count = 0;
+        int iter2 = 0;
+
+
+
+        double wristTarget = 0.0;
+        while (opModeIsActive()) {
+            if (isStopRequested()) {
+                extender1.setPower(0);
+                extender2.setPower(0);
+                wrist.setPower(0);
+                break;
+            }
+
+            position1 = -extender1.getCurrentPosition();
+            position2 = extender2.getCurrentPosition();
+
+            averagePosition = (position1 + position2) / 2;
+
+            pidOutput = extController.calculate(averagePosition, targetPosition);
+
+            extender1.setPower(pidOutput);
+            extender2.setPower(-pidOutput);
+
+            double wristOutput = wristController.calculate(wrist.getCurrentPosition(), wristTarget);
+            wrist.setPower(-wristOutput);
+            telemetry.addData("wrist", wrist.getCurrentPosition());
+            telemetry.addData("wristpid", wristOutput);
+            telemetry.update();
+
+            if (Math.abs(averagePosition - targetPosition) < 100 || averagePosition > targetPosition) {
+                reachedFirst = true;
+            }
+
+            if (reachedFirst && !placed) {
+                wristTarget = 600;
+                if (wrist.getCurrentPosition() > wristTarget) {
+                    reachedSecond = true;
+                }
+
+                if (reachedSecond) {
+                    iter_count++;
+                    if (iter_count > 50) {
+                        clawLeft.setPosition(0.040);
+                    }
+                    if (iter_count > 65) {
+                        placed = true;
+                    }
+                }
+            }
+
+            if (placed) {
+                iter2++;
+                if (iter2 > 15) {
+                    wristTarget = 5;
+                }
+                if (iter2 > 30) {
+                    targetPosition = 3;
+                }
+                if (iter2 > 60) {
+                    extender1.setPower(0);
+                    extender2.setPower(0); 
+                    wrist.setPower(0);
+                    break;
+                }
+            }
+
+            sleep(10);
+        }
+
+        TrajectorySequence trajectory1 = drive.trajectorySequenceBuilder(new Pose2d(-58.60, -57.19, Math.toRadians(228.30)))
                 .splineTo(new Vector2d(-43.62, -47.68), Math.toRadians(-2.62))
                 .splineTo(new Vector2d(25.12, -46.09), Math.toRadians(-34.90))
                 .splineTo(new Vector2d(46.27, -61.25), Math.toRadians(270.00))
                 .build();
-        drive.setPoseEstimate(trajectory.start());
-        drive.followTrajectorySequence(trajectory);
-    }
-
-    private void updateTelemetry() {
-        telemetry.addData("State", currentState);
-        telemetry.addData("Wrist Position", wrist.getCurrentPosition());
-        telemetry.addData("Extender Position", (extender1.getCurrentPosition() + extender2.getCurrentPosition()) / 2);
-        telemetry.update();
+        drive.setPoseEstimate(trajectory1.start());
+        drive.followTrajectorySequence(trajectory1);
     }
 }
