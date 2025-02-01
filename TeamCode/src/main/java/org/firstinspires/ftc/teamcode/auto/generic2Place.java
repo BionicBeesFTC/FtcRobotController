@@ -94,7 +94,7 @@ public class generic2Place extends LinearOpMode {
                 reachedFirst = true;
             }
 
-            if (reachedFirst) {
+            if (reachedFirst && !placed) {
                 wristTarget = 600;
                 if (wrist.getCurrentPosition() > wristTarget) {
                     reachedSecond = true;
@@ -114,10 +114,10 @@ public class generic2Place extends LinearOpMode {
             if (placed) {
                 iter2++;
                 if (iter2 > 15) {
-                    wristTarget = 0;
+                    wristTarget = 5;
                 }
                 if (iter2 > 30) {
-                    targetPosition = 0;
+                    targetPosition = 3;
                 }
                 if (iter2 > 60) {
                     break;

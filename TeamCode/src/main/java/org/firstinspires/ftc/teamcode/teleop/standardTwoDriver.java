@@ -213,9 +213,18 @@ public class standardTwoDriver extends LinearOpMode {
                 }
 
                 if (gamepad1.a) {
+
                     rotator.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
                     rotator.setTargetPosition(0);
                     rotator.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+                    extender1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    extender1.setTargetPosition(0);
+                    extender1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+                    extender2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    extender2.setTargetPosition(0);
+                    extender2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
                 }
 
                 int currentPos = rotator.getCurrentPosition();
