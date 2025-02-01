@@ -96,6 +96,8 @@ public class standardTwoDriver extends LinearOpMode {
         int extender1Holdtarget = 0;
         int extender2Holdtarget = 0;
 
+        extender1.setTargetPosition(extender1Holdtarget);
+        extender2.setTargetPosition(extender2Holdtarget);
         waitForStart();
 
         if (isStopRequested()) return;
@@ -152,6 +154,7 @@ public class standardTwoDriver extends LinearOpMode {
                 telemetry.addLine("Speed full");
 //                telemetry.update();
             }
+
             if (extender1.getCurrentPosition() < MAX_ARM_HEIGHT) {
                 if (gamepad2.dpad_up) {
                     extender1Holdtarget=0;
