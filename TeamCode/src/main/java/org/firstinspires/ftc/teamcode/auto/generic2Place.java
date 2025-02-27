@@ -6,6 +6,7 @@ import com.acmerobotics.roadrunner.geometry.Pose2d;
 import com.acmerobotics.roadrunner.geometry.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
 import org.firstinspires.ftc.teamcode.drive.SampleMecanumDrive;
@@ -25,7 +26,9 @@ public class generic2Place extends LinearOpMode {
         DcMotor extender1 = hardwareMap.dcMotor.get("extender1");
         DcMotor extender2 = hardwareMap.dcMotor.get("extender2");
         DcMotor wrist = hardwareMap.dcMotor.get("rotator");
-        Servo clawLeft = hardwareMap.servo.get("leftclaw");
+        Servo armjoint = hardwareMap.servo.get("armjoint");
+        CRServo leftturn = hardwareMap.crservo.get("leftturn");
+        CRServo rightturn = hardwareMap.crservo.get("rightturn");
 
 
 
@@ -44,15 +47,14 @@ public class generic2Place extends LinearOpMode {
         BasicPID wristController = new BasicPID(wristCoeffs);
 
         // Target position for the extender motors (modify as needed)
-        int targetPosition = 3750;
+        int targetPosition = 3800;
 
         double pidOutput = 0.0;
         int position1 = 0;
         int position2 = 0;
         int averagePosition = 0;
         telemetry.addData("pos1", position1);
-
-        clawLeft.setPosition(0.);
+        armjoint.setPosition(0);
 
 
         waitForStart();
@@ -104,7 +106,7 @@ public class generic2Place extends LinearOpMode {
             }
 
             if (reachedFirst && !placed) {
-                wristTarget = 600;
+                wristTarget = 550;
                 if (wrist.getCurrentPosition() > wristTarget) {
                     reachedSecond = true;
                 }
@@ -112,9 +114,11 @@ public class generic2Place extends LinearOpMode {
                 if (reachedSecond) {
                     iter_count++;
                     if (iter_count > 50) {
-                        clawLeft.setPosition(0.040);
+                        armjoint.setPosition(-0.050);
+                        leftturn.setPower(-1);
+                        rightturn.setPower(1);
                     }
-                    if (iter_count > 65) {
+                    if (iter_count > 90) {
                         placed = true;
                     }
                 }
@@ -122,29 +126,31 @@ public class generic2Place extends LinearOpMode {
 
             if (placed) {
                 iter2++;
-                if (iter2 > 15) {
+                if (iter2 > 30) {
                     wristTarget = 5;
                 }
-                if (iter2 > 30) {
+                if (iter2 > 40) {
                     targetPosition = 3;
                 }
-                if (iter2 > 60) {
+                if (iter2 > 400) {
+                    System.out.println("made it");
                     extender1.setPower(0);
                     extender2.setPower(0); 
                     wrist.setPower(0);
+                    leftturn.setPower(0);
+                    rightturn.setPower(0);
                     break;
                 }
             }
-
-            sleep(10);
+            //sleep(10);
         }
 
-        TrajectorySequence trajectory1 = drive.trajectorySequenceBuilder(new Pose2d(-58.60, -57.19, Math.toRadians(228.30)))
-                .splineTo(new Vector2d(-43.62, -47.68), Math.toRadians(-2.62))
-                .splineTo(new Vector2d(25.12, -46.09), Math.toRadians(-34.90))
-                .splineTo(new Vector2d(46.27, -61.25), Math.toRadians(270.00))
-                .build();
-        drive.setPoseEstimate(trajectory1.start());
-        drive.followTrajectorySequence(trajectory1);
+      //  TrajectorySequence trajectory1 = drive.trajectorySequenceBuilder(new Pose2d(-58.60, -57.19, Math.toRadians(228.30)))
+        //        .splineTo(new Vector2d(-43.62, -47.68), Math.toRadians(-2.62))
+          //      .splineTo(new Vector2d(25.12, -46.09), Math.toRadians(-34.90))
+            //    .splineTo(new Vector2d(46.27, -61.25), Math.toRadians(270.00))
+              //  .build();
+      //  drive.setPoseEstimate(trajectory1.start());
+        //  drive.followTrajectorySequence(trajectory1);
     }
 }

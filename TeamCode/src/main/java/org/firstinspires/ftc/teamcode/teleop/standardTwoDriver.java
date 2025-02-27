@@ -13,6 +13,7 @@ import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.TouchSensor;
 
 import org.firstinspires.ftc.robotcore.external.navigation.Acceleration;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -32,6 +33,8 @@ public class standardTwoDriver extends LinearOpMode {
 
 
     BNO055IMU imu;
+
+    TouchSensor lim_1;
 
 
     public void initIMU(HardwareMap hwm) {
@@ -61,9 +64,15 @@ public class standardTwoDriver extends LinearOpMode {
         DcMotor extender2 = hardwareMap.dcMotor.get("extender2");
         DcMotor rotator = hardwareMap.dcMotor.get("rotator");
 
-        Servo clawLeft = hardwareMap.servo.get("leftclaw");
-        // Servo clawRight = hardwareMap.servo.get("rightclaw");
-        // CRServo Drone = hardwareMap.crservo.get("Drone");
+        lim_1 = hardwareMap.touchSensor.get("lim_1");
+
+        PIDCoefficients coeffs = new PIDCoefficients(0.005, 0.0, 0.0);
+        BasicPID extController = new BasicPID(coeffs);
+
+        Servo armjoint = hardwareMap.servo.get("armjoint");
+        armjoint.setPosition(0);
+        CRServo leftturn = hardwareMap.crservo.get("leftturn");
+        //CRServo rightturn = hardwareMap.crservo.get("rightturn");
 
 
         // Reverse the right side motors
@@ -71,38 +80,47 @@ public class standardTwoDriver extends LinearOpMode {
 
         rF.setDirection(DcMotor.Direction.REVERSE);
         rB.setDirection(DcMotor.Direction.REVERSE);
-        extender1.setDirection(DcMotor.Direction.REVERSE);
+
+        extender1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        extender2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        extender1.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        extender2.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         // Set motors to brake when not in use
         lF.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rF.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         lB.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rB.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        extender1.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        extender2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rotator.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        // Drone.setPower(0);
-        //rotator.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        double pidOutput = 0.0;
+        int position1 = 0;
+        int position2 = 0;
+        int averagePosition = 0;
+        int extTargetPosition = 0;
+
         rotator.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         rotator.setTargetPosition(0);
         rotator.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-//        extender1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-//        extender2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
         BasicPID arm_controller = new BasicPID(new PIDCoefficients(KP, KI, KD));
         int arm_target = 1;
 
-        int extender1Holdtarget = 0;
-        int extender2Holdtarget = 0;
-
-        extender1.setTargetPosition(extender1Holdtarget);
-        extender2.setTargetPosition(extender2Holdtarget);
         waitForStart();
 
         if (isStopRequested()) return;
 
         while (opModeIsActive()) {
+            position1 = -extender1.getCurrentPosition();
+            position2 = extender2.getCurrentPosition();
+
+            averagePosition = (position1 + position2) / 2;
+
+            pidOutput = extController.calculate(averagePosition, extTargetPosition);
+
+            extender1.setPower(pidOutput);
+            extender2.setPower(-pidOutput);
+
             double rx = -gamepad1.right_stick_x; // Remember, this is reversed!
             double x = -gamepad1.left_stick_x * 1.1; // Counteract imperfect strafing
             double y = gamepad1.left_stick_y;
@@ -155,61 +173,50 @@ public class standardTwoDriver extends LinearOpMode {
 //                telemetry.update();
             }
 
-            if (extender1.getCurrentPosition() < MAX_ARM_HEIGHT) {
                 if (gamepad2.dpad_up) {
-                    extender1Holdtarget=0;
-                    extender2Holdtarget=0;
-                    extender1.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                    extender2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                    extender1.setPower(1.00);
-                    extender2.setPower(1.00);
+                    extTargetPosition += 50;
                 } else if (gamepad2.dpad_down) {
-                    extender1Holdtarget=0;
-                    extender2Holdtarget=0;
-                    extender1.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                    extender2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                    extender1.setPower(-0.8);
-                    extender2.setPower(-0.8);
-                } else {
-                    extender1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                    extender2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                    if(extender1Holdtarget == 0){
-                        extender1Holdtarget = extender1.getCurrentPosition();
-                    }
-                    if(extender2Holdtarget == 0){
-                        extender2Holdtarget = extender2.getCurrentPosition();
-                    }
-                    if(Math.abs(extender1Holdtarget-extender1.getCurrentPosition()) > 10){
-                        extender1.setTargetPosition(extender1Holdtarget);
-                    }
-                    if(Math.abs(extender2Holdtarget-extender2.getCurrentPosition()) > 10){
-                        extender2.setTargetPosition(extender2Holdtarget);
-                    }
-                    extender1.setPower(1.00);
-                    extender2.setPower(1.00);
+                    extTargetPosition -= 50;
                 }
-            } else {
-                extender1.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                extender2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                extender1.setPower(0);
-                extender2.setPower(0);
-            }
+
+                if (extTargetPosition < 90) {
+                    extTargetPosition = 90;
+                } else if (extTargetPosition > 4300) {
+                    extTargetPosition = 4300;
+                }
 
                 //TODO:Delete this code after fixing arm extention limit.
 
-                telemetry.addLine("extender 1: :) " + extender1.getCurrentPosition());
-//            telemetry.update();
-                if (gamepad2.left_bumper) {
-                    // close
-                    // clawRight.setPosition(0.035);
-                    clawLeft.setPosition(0.);
+                telemetry.addLine("extender 1:" + -extender1.getCurrentPosition());
+                telemetry.addLine("extender 2:" + extender2.getCurrentPosition());
+                telemetry.addLine("extender avg:" + averagePosition);
+                telemetry.addLine("target: " + extTargetPosition);
 
+//            telemetry.update();
+
+                if (!gamepad2.right_bumper && !gamepad2.left_bumper) {
+                    leftturn.setPower(0);
+                }
+
+
+
+                if (gamepad2.left_bumper) {
+                    leftturn.setPower(0.75);
                 }
 
                 if (gamepad2.right_bumper) {
-                    // open
-                    // clawRight.setPosition(0);
-                    clawLeft.setPosition(0.040);
+                    leftturn.setPower(-0.75);
+                }
+
+
+
+
+                if (gamepad2.left_stick_y > 0) {
+                    armjoint.setPosition(armjoint.getPosition()-0.001);
+                }
+
+                if (gamepad2.left_stick_y <0) {
+                    armjoint.setPosition(armjoint.getPosition()+0.001);
                 }
 
                 if (gamepad1.a) {
@@ -217,14 +224,6 @@ public class standardTwoDriver extends LinearOpMode {
                     rotator.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
                     rotator.setTargetPosition(0);
                     rotator.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-
-                    extender1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                    extender1.setTargetPosition(0);
-                    extender1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-
-                    extender2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                    extender2.setTargetPosition(0);
-                    extender2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
                 }
 
                 int currentPos = rotator.getCurrentPosition();
@@ -236,6 +235,17 @@ public class standardTwoDriver extends LinearOpMode {
                         arm_target = 0;
                     }
                 }
+
+                telemetry.addLine("lim " + lim_1.isPressed());
+
+                if (lim_1.isPressed()) {
+                    telemetry.addLine("LIMSWITCH");
+                    extender1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    extender2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    extender1.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+                    extender2.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+                }
+
                 double pidPower = arm_controller.calculate(arm_target, currentPos);
                 rotator.setTargetPosition(arm_target);
                 rotator.setMode(DcMotor.RunMode.RUN_TO_POSITION);
@@ -250,22 +260,3 @@ public class standardTwoDriver extends LinearOpMode {
             }
         }
     }
-
-
-
-            //TODO: might need to readd the creation of packet;
-//            TelemetryPacket packet = new TelemetryPacket();
-//            packet.put("extender1: ", extender1.getCurrentPosition());
-//            packet.put("extender2: ", extender2.getCurrentPosition());
-//            FtcDashboard.getInstance().sendTelemetryPacket(packet);
-      //  }
-   // }
-    //private void initialize_extendor_1 (DcMotor extendor1 ,DcMotor extendor2){
-       // int extendor1_position = extendor1.getCurrentPosition();
-       // int extendor2_position = extendor2.getCurrentPosition();
-//        while (extendor1_position < -1000 && extendor2_position <-1000){
-//            extendor1.setPower(-0.6);
-//            extendor2.setPower(-0.6);
-//            extendor1_position = extendor1.getCurrentPosition();
-//            extendor2_position = extendor2.getCurrentPosition();
-   //     }
